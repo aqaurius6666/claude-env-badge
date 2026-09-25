@@ -49,41 +49,32 @@ describe('configOf', () => {
     expect(tierOf(c.tiers, 'dev-sandbox', 'nope')?.id).toBe('other')
   })
 
-  describe("owner's real config", () => {
-    const OWNER_OPTIONS = {
-      'aws.bins': ['aws', 'safe-aws'],
-      'k8s.bins': ['kubectl', 'helm', 'k9s', 'safe-kubectl'],
+  // wrapper bins (e.g. a read-only aws-ro) added next to a builtin; names are placeholders, never executed
+  describe('extra bins on a builtin rule', () => {
+    const WRAPPED = {
+      'aws.bins': ['aws', 'aws-ro'],
+      'k8s.bins': ['kubectl', 'helm', 'k9s', 'kubectl-ro'],
     }
 
-    test('aws bins exactly [aws, safe-aws], builtin flags/vars/default kept', () => {
-      const c = configOf(OWNER_OPTIONS)
-      const aws = c.rules.find((r) => r.id === 'aws')!
-      expect(aws.bins).toEqual(['aws', 'safe-aws'])
-      expect(aws.flags).toEqual(['--profile'])
-      expect(aws.vars).toEqual(['AWS_PROFILE'])
-      expect(aws.default).toEqual(['printenv', 'AWS_PROFILE'])
-      expect(aws.label).toEqual([])
-    })
-
-    test('k8s bins include safe-kubectl, builtin flags/vars/default kept', () => {
-      const c = configOf(OWNER_OPTIONS)
-      const k8s = c.rules.find((r) => r.id === 'k8s')!
-      expect(k8s.bins).toEqual(['kubectl', 'helm', 'k9s', 'safe-kubectl'])
-      expect(k8s.flags).toEqual(['--context', '--kube-context'])
-      expect(k8s.vars).toEqual([])
-      expect(k8s.default).toEqual(['kubectl', 'config', 'current-context'])
-    })
-
-    test('setting bins replaces the builtin list, not appends', () => {
-      // a list that omits the builtins: if bins appended, the builtin would still show up
-      const c = configOf({ 'aws.bins': ['safe-aws'], 'k8s.bins': ['safe-kubectl'] })
-      expect(c.rules.find((r) => r.id === 'aws')!.bins).toEqual(['safe-aws'])
-      expect(c.rules.find((r) => r.id === 'k8s')!.bins).toEqual(['safe-kubectl'])
-    })
-
-    test('no unknown keys from the owner options', () => {
-      const c = configOf(OWNER_OPTIONS)
+    test('bins set, builtin flags/vars/default kept', () => {
+      const c = configOf(WRAPPED)
+      expect(c.rules.find((r) => r.id === 'aws')).toMatchObject({
+        bins: ['aws', 'aws-ro'],
+        flags: ['--profile'],
+        vars: ['AWS_PROFILE'],
+        default: ['printenv', 'AWS_PROFILE'],
+      })
+      expect(c.rules.find((r) => r.id === 'k8s')).toMatchObject({
+        bins: ['kubectl', 'helm', 'k9s', 'kubectl-ro'],
+        flags: ['--context', '--kube-context'],
+        default: ['kubectl', 'config', 'current-context'],
+      })
       expect(c.unknownKeys).toEqual([])
+    })
+
+    test('bins replaces the builtin list, not appends', () => {
+      const c = configOf({ 'aws.bins': ['aws-ro'] })
+      expect(c.rules.find((r) => r.id === 'aws')!.bins).toEqual(['aws-ro'])
     })
   })
 

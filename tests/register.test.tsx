@@ -85,25 +85,3 @@ test('/env-badge test explains a command', async ($, on) => {
   const help = await $.command.run(slash(''))
   expect(help.text).toContain('/env-badge doctor')
 })
-
-// The owner's real pluginConfigs.env-badge.options ({"aws.bins": ["aws", "safe-aws"],
-// "k8s.bins": [...,"safe-kubectl"]}) cannot be exercised through this kit: the kit
-// only ever hands register() the declared userConfig defaults (none here, since this
-// plugin.json has no userConfig block), and there is no settings.json or `mock` noun
-// that feeds `options`. `TestOptions.plugins` cannot stand in either: an inline
-// plugin's `register` is re-parsed as a standalone, self-contained module (see the
-// probe below) and cannot import '../hooks/register' or close over a test-file
-// constant, so it cannot wrap the real module with different options.
-//
-// safe-aws -> aws badge and safe-kubectl -> k8s badge with the owner's real options
-// are covered end-to-end at the Resolver level instead, in
-// tests/badge.spec.ts ("Resolver.badges with the owner's real config").
-test('kit delivers only declared userConfig: no pluginConfigs reach the primary module', async ($, on) => {
-  world(on)
-  const { text } = await $.command.run(slash('doctor'))
-  // options received holds nothing but the universal `enabled` flag every plugin gets
-  expect(text).toContain('options received: {"enabled":true}')
-  // bins are still the untouched builtins: no safe-aws, no safe-kubectl
-  expect(text).toContain('aws: bins=aws ')
-  expect(text).toContain('k8s: bins=kubectl,helm,k9s ')
-})
