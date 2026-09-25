@@ -1,0 +1,323 @@
+<title>env-badge Demo Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Single dark look on purpose: the subject is a terminal. */
+:root {
+  color-scheme: dark;
+  --ground: #0c0f14;
+  --surface: #141820;
+  --surface-2: #1b2029;
+  --line: #262c37;
+  --ink: #dde1e8;
+  --ink-2: #a3abb8;
+  --dim: #677080;
+  --accent: #d9825b;
+  --prod: #ff6b6b;
+  --stg: #e8c547;
+  --ok: #8bd17c;
+  --cyan: #5fd0e0;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+html, body { background: var(--ground); color: var(--ink); }
+body { font-family: var(--sans); font-size: 15px; line-height: 1.55; padding-inline: 16px; padding-block: 28px 64px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
+header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+header h1 code { font-family: var(--mono); font-weight: 700; color: var(--accent); }
+header p { margin: 0; color: var(--ink-2); max-width: 60ch; }
+
+/* ---------- stage ---------- */
+.player { display: grid; gap: 12px; }
+.frame { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 10px; overflow: hidden; background: #07090c; border: 1px solid var(--line); }
+.stage { position: absolute; top: 0; left: 0; width: 1280px; height: 720px; transform-origin: 0 0; background: radial-gradient(120% 90% at 20% 0%, #161b25 0%, #0a0c10 70%); font-family: var(--mono); }
+
+.chapter { position: absolute; top: 26px; left: 48px; font: 600 14px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); display: flex; gap: 12px; align-items: center; }
+.chapter b { color: var(--accent); font-family: var(--mono); letter-spacing: 0; }
+
+.term { position: absolute; top: 24px; left: 48px; width: 1184px; height: 560px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.6); display: flex; flex-direction: column; transition: width .5s ease; }
+.term.narrow { width: 720px; }
+.tbar { height: 34px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--dim); }
+.tbar i { width: 11px; height: 11px; border-radius: 50%; background: #2b313c; display: block; }
+.tbar span { margin-left: 10px; }
+.log { flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; padding: 14px 22px 6px; font-size: 17px; line-height: 1.6; white-space: pre; }
+.log > div { min-height: 1.6em; }
+.inbox { flex: none; margin: 6px 16px 14px; border: 1px solid #3a4150; border-radius: 6px; padding: 7px 12px; font-size: 17px; white-space: pre; color: var(--ink); }
+.inbox .caret { display: inline-block; width: 9px; height: 1.15em; background: var(--ink); vertical-align: -3px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.hint { font-size: 12.5px; color: var(--dim); padding: 0 18px 10px; margin-top: -8px; }
+
+.u { color: var(--ink-2); }
+.dot { color: var(--accent); }
+.dot.run { color: var(--dim); animation: blink .7s steps(1) infinite; }
+.dot.say { color: var(--ink); }
+.tool { color: var(--ink); font-weight: 700; }
+.o { color: var(--dim); }
+.sh { color: var(--ink-2); }
+.b { display: inline-flex; gap: 2ch; margin-left: 2ch; }
+.b span { border-radius: 3px; transition: box-shadow .3s; }
+.prod { color: var(--prod); font-weight: 700; }
+.stg { color: var(--stg); }
+.ok { color: var(--ok); }
+.cy { color: var(--cyan); }
+.dm { color: var(--dim); }
+.ring { box-shadow: 0 0 0 2px currentColor, 0 0 18px 2px color-mix(in srgb, currentColor 45%, transparent); }
+.fade { opacity: .28; transition: opacity .4s; }
+
+.side { position: absolute; top: 24px; left: 792px; width: 440px; opacity: 0; transform: translateX(24px); transition: opacity .45s, transform .45s; pointer-events: none; }
+.side.on { opacity: 1; transform: none; }
+.card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; font-size: 14.5px; line-height: 1.6; white-space: pre; color: var(--ink-2); }
+.card h4 { margin: 0 0 8px; font: 600 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); white-space: normal; }
+.card .k { color: var(--cyan); }
+.card .s { color: var(--ok); }
+.card .new { background: rgba(217,130,91,.14); border-radius: 3px; }
+.card + .card { margin-top: 14px; }
+.legend { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; font-size: 16px; align-items: center; white-space: normal; }
+.legend .m { color: var(--ink-2); }
+
+.cap { position: absolute; left: 48px; right: 48px; bottom: 22px; min-height: 64px; display: flex; align-items: flex-end; }
+.cap p { margin: 0; font: 500 23px/1.35 var(--sans); color: #f3f5f8; text-wrap: balance; max-width: 1000px; transition: opacity .3s; }
+.cap p em { font-style: normal; color: var(--accent); }
+.cap p code { font-family: var(--mono); font-size: .88em; color: var(--ink); background: rgba(255,255,255,.06); padding: 1px 6px; border-radius: 4px; }
+.cap.lift { bottom: 22px; }
+.term.withcap { height: 588px; }
+
+.callout { position: absolute; font: 600 16px/1.3 var(--sans); color: #0c0f14; background: var(--accent); padding: 6px 12px; border-radius: 6px; white-space: nowrap; opacity: 0; transform: translateY(6px); transition: opacity .3s, transform .3s; pointer-events: none; }
+.callout.on { opacity: 1; transform: none; }
+.callout::before { content: ""; position: absolute; left: -7px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-left: 0; border-right-color: var(--accent); }
+
+.title { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 22px; background: radial-gradient(90% 80% at 50% 30%, #1a202b 0%, #090b0f 75%); opacity: 0; transition: opacity .6s; pointer-events: none; }
+.title.on { opacity: 1; }
+.title h2 { margin: 0; font: 700 84px/1 var(--mono); letter-spacing: -0.03em; color: var(--ink); }
+.title h2 b { color: var(--accent); }
+.title p { margin: 0 auto; font: 500 26px/1.4 var(--sans); color: var(--ink-2); max-width: 820px; text-wrap: balance; }
+.title .demo { font: 17px/1.7 var(--mono); text-align: left; margin: 10px auto 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 22px; white-space: pre; color: var(--ink); }
+.title .fine { font: 500 17px/1.4 var(--sans); color: var(--dim); }
+.title .fine b { color: var(--stg); font-weight: 600; }
+
+/* ---------- controls ---------- */
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.bar button { font: 600 14px/1 var(--sans); color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 9px 14px; cursor: pointer; }
+.bar button:hover { border-color: #3a4150; }
+.bar button:focus-visible, .scenes button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.time { font: 13px/1 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.track { flex: 1 1 240px; display: flex; gap: 3px; height: 6px; }
+.track div { position: relative; background: var(--line); border-radius: 3px; overflow: hidden; }
+.track div i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); }
+
+/* ---------- storyboard ---------- */
+.board h2 { font-size: 20px; margin: 0 0 4px; }
+.board > p { margin: 0 0 16px; color: var(--ink-2); max-width: 70ch; }
+.scenes { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.scenes li { background: var(--surface); }
+.scenes button { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 64px 180px 1fr; gap: 6px 18px; padding: 14px 18px; align-items: baseline; }
+.scenes button:hover { background: var(--surface-2); }
+.scenes li.cur button { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.scenes .t { font: 13px/1.4 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.scenes .n { font-weight: 600; color: var(--ink); }
+.scenes .d { color: var(--ink-2); }
+.scenes .d code { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+@media (max-width: 640px) {
+  .scenes button { grid-template-columns: 56px 1fr; }
+  .scenes .d { grid-column: 1 / -1; }
+  header h1 { font-size: 23px; }
+}
+
+/* record mode: stage fills the viewport, nothing else */
+body.rec { padding: 0; margin: 0; }
+body.rec header, body.rec .bar, body.rec .board { display: none; }
+body.rec .wrap { max-width: none; }
+body.rec .frame { border: 0; border-radius: 0; }
+/* frames are captured on a fake clock: CSS timing would run on real time */
+body.rec *, body.rec *::before { transition: none !important; animation: none !important; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><code>env-badge</code> demo reel</h1>
+    <p>A 20-second loop of the Claude Code plugin for the README. Every badge string on screen matches what the plugin draws.</p>
+  </header>
+
+  <section class="player" aria-label="Demo video">
+    <div class="frame" id="frame">
+      <div class="stage" id="stage">
+        <div class="chapter" id="chapter"></div>
+        <div class="term withcap" id="term">
+          <div class="tbar"><i></i><i></i><i></i><span id="ttl">claude — ~/infra</span></div>
+          <div class="log" id="log"></div>
+          <div class="inbox" id="inbox">&gt; <span id="typed"></span><span class="caret"></span></div>
+          <div class="hint">? for shortcuts</div>
+        </div>
+        <div class="side" id="side"></div>
+        <div class="callout" id="callout"></div>
+        <div class="cap" id="cap"><p id="capText"></p></div>
+        <div class="title" id="title"></div>
+      </div>
+    </div>
+    <div class="bar">
+      <button id="play" type="button">Pause</button>
+      <button id="restart" type="button">Restart</button>
+      <div class="track" id="track"></div>
+      <span class="time" id="time">0:00 / 0:20</span>
+    </div>
+  </section>
+
+  <section class="board">
+    <h2>Storyboard</h2>
+    <p>Four beats in one continuous session. Click a beat to jump to it.</p>
+    <ol class="scenes" id="scenes"></ol>
+  </section>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage'), frame = $('frame'), log = $('log'), typed = $('typed');
+  const REC = location.hash === '#record';
+  if (REC) document.body.classList.add('rec');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches && !REC;
+
+  // ---------- scale the 1280x720 stage into its frame ----------
+  const fit = () => { stage.style.transform = `scale(${frame.clientWidth / 1280})`; };
+  new ResizeObserver(fit).observe(frame); fit();
+
+  // ---------- timeline engine ----------
+  const S = { gen: 0, paused: false, scene: 0, t: 0 };
+  class Cancel extends Error {}
+  const sleep = (ms) => new Promise((res, rej) => {
+    const g = S.gen; let left = ms; let last = performance.now();
+    const tick = () => {
+      if (g !== S.gen) return rej(new Cancel());
+      const now = performance.now(), dt = now - last; last = now;
+      if (!S.paused) { left -= dt; S.t += dt; }
+      if (left <= 0) return res();
+      setTimeout(tick, Math.min(40, Math.max(left, 1)));
+    };
+    setTimeout(tick, Math.min(40, ms));
+  });
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // ---------- stage primitives ----------
+  const chapter = (n, name) => { $('chapter').innerHTML = n ? `<b>${String(n).padStart(2, '0')}</b>${name}` : ''; };
+  const cap = async (html) => { const p = $('capText'); p.style.opacity = 0; await sleep(120); p.innerHTML = html; p.style.opacity = 1; };
+  const add = (html, cls = '') => { const d = document.createElement('div'); if (cls) d.className = cls; d.innerHTML = html; log.appendChild(d); while (log.children.length > 40) log.firstChild.remove(); return d; };
+  const clear = () => { log.innerHTML = ''; typed.textContent = ''; };
+  async function type(text, cps = 38) {
+    typed.textContent = '';
+    if (reduce) { typed.textContent = text; await sleep(400); return; }
+    for (const ch of text) { typed.textContent += ch; await sleep(1000 / cps * (ch === ' ' ? 1.4 : 1)); }
+    await sleep(350);
+  }
+  async function ask(text, cps) { await type(text, cps); typed.textContent = ''; if (log.children.length) add(''); add(`<span class="u">&gt; ${esc(text)}</span>`); add(''); await sleep(300); }
+  const say = (text) => add(`<span class="dot say">⏺</span> ${esc(text)}`);
+  async function bash(cmd, badges, out, opt = {}) {
+    const row = add(`<span class="dot run">⏺</span> <span class="tool">Bash</span>(${esc(cmd)})`);
+    let b = null;
+    if (badges) { b = add(`<span class="b">${badges.map(([t, c]) => `<span class="${c}">${esc(t)}</span>`).join('')}</span>`); }
+    await sleep(opt.wait ?? 700);
+    row.querySelector('.dot').className = 'dot';
+    const outs = (out ? [].concat(out) : []).map((o, i) => add(`<span class="o">  ${i ? '   ' : '⎿ '} ${esc(o)}</span>`));
+    await sleep(opt.after ?? 500);
+    return { row, b, outs, badge: (i = 0) => b && b.querySelectorAll('span span')[i] };
+  }
+  const setBadge = (r, i, text, cls) => { const s = r.badge(i); s.textContent = text; s.className = cls; };
+  const reply = (lines) => [].concat(lines).map((o, i) => add(`<span class="o">  ${i ? '   ' : '⎿ '} ${esc(o)}</span>`));
+  async function slash(cmd, out) { await type(cmd); typed.textContent = ''; add(`<span class="u">&gt; ${esc(cmd)}</span>`); await sleep(350); const r = reply(out); add(''); await sleep(400); return r; }
+  const side = (html) => { $('side').innerHTML = html; $('side').classList.add('on'); $('term').classList.add('narrow'); };
+  const unside = () => { $('side').classList.remove('on'); $('term').classList.remove('narrow'); };
+  function callout(el, text) {
+    const c = $('callout'); if (!el) { c.classList.remove('on'); return; }
+    const sr = stage.getBoundingClientRect(), er = el.getBoundingClientRect(), k = sr.width / 1280;
+    c.textContent = text;
+    c.style.left = ((er.right - sr.left) / k + 18) + 'px';
+    c.style.top = ((er.top - sr.top) / k + (er.height / k) / 2 - 16) + 'px';
+    c.classList.add('on');
+  }
+  const ring = (el, on = true) => el && el.classList.toggle('ring', on);
+  const title = (html) => { $('title').innerHTML = html; $('title').classList.add('on'); };
+  const untitle = () => $('title').classList.remove('on');
+  function reset() { clear(); unside(); callout(null); untitle(); chapter(0); $('capText').innerHTML = ''; $('ttl').textContent = 'claude — ~/infra'; }
+
+  // ---------- scenes ----------
+  const SCENES = [
+    { name: 'Three tiers', dur: 7.9, desc: 'One task across prod, staging and a sandbox account. Red bold ⚠, yellow, green.', cap: 'Prod is red and bold. Staging is yellow. Everything else is green.',
+      run: async () => {
+        await ask('check the api image tag in every environment', 70);
+        const a = await bash('kubectl get deploy api --context prod-eu -o wide', [['⚠ k8s: prod-eu', 'prod']], 'api   6/6   api:1.42.0', { wait: 450, after: 250 });
+        const b = await bash('kubectl get deploy api --context stg-eu -o wide', [['k8s: stg-eu', 'stg']], 'api   2/2   api:1.43.0-rc1', { wait: 450, after: 250 });
+        const c = await bash('aws ecr describe-images --repository-name api --profile sandbox', [['aws: sandbox', 'ok']], '… +12 lines (ctrl+r to expand)', { wait: 450, after: 250 });
+        ring(a.badge()); await sleep(1100); ring(a.badge(), false);
+        ring(b.badge()); await sleep(650); ring(b.badge(), false);
+        ring(c.badge()); await sleep(650); ring(c.badge(), false);
+        await sleep(900);
+      } },
+    { name: 'Defaults and pins', dur: 7.3, keep: true, desc: 'No target named: <code>…</code>, then your current context with <code>(default)</code>. After a context switch, old rows keep what they ran against.', cap: 'No target named? It shows your current one. Old rows keep theirs.',
+      run: async () => {
+        await ask('switch to prod-eu and list nodes', 70);
+        const r = await bash('kubectl get nodes', [['k8s: …', 'dm']], null, { wait: 800, after: 0 });
+        setBadge(r, 0, 'k8s: kind-dev (default)', 'ok'); reply('kind-dev-control-plane   Ready');
+        await sleep(400);
+        await bash('kubectl config use-context prod-eu', [['k8s: kind-dev (default)', 'ok']], 'Switched to context "prod-eu".', { wait: 450, after: 250 });
+        const b = await bash('kubectl get nodes', [['⚠ k8s: prod-eu (default)', 'prod']], 'ip-10-0-3-17.eu-west-1   Ready', { wait: 450, after: 250 });
+        ring(b.badge()); await sleep(900); ring(b.badge(), false);
+        ring(r.badge()); callout(r.badge(), 'still kind-dev'); await sleep(2300); ring(r.badge(), false); callout(null);
+      } },
+    { name: 'Chains and labels', dur: 5.2, keep: true, desc: 'One badge per chained command. A label script turns account ids into names.', cap: 'One badge per chained command. Label scripts give ids real names.',
+      run: async () => {
+        const r = await bash('aws s3 sync ./build s3://web --profile stg && kubectl rollout restart deploy/web --context prod-eu', [['aws: stg', 'stg'], ['⚠ k8s: prod-eu', 'prod']], 'deployment.apps/web restarted', { wait: 450, after: 200 });
+        ring(r.badge(0)); ring(r.badge(1)); await sleep(1200); ring(r.badge(0), false); ring(r.badge(1), false);
+        const a = await bash('aws s3 ls --profile 111111111111-AdminRole', [['⚠ aws: billing-prod · Admin', 'prod']], 'PRE invoices/', { wait: 450, after: 200 });
+        ring(a.badge()); await sleep(2000); ring(a.badge(), false);
+      } },
+    { name: 'Install', dur: 3.3, desc: 'Install lines and the one caveat.', cap: '',
+      run: async () => {
+        title(`<h2>env<b>-</b>badge</h2>
+          <div class="demo">/plugin marketplace add aqaurius6666/claude-env-badge
+/plugin install env-badge@env-badge</div>
+          <p class="fine">Display only. <b>No badge doesn't mean safe.</b> Use permissions for that.</p>`);
+        await sleep(3200);
+      } },
+  ];
+  const TOTAL = SCENES.reduce((a, s) => a + s.dur, 0);
+  const starts = SCENES.map((_, i) => SCENES.slice(0, i).reduce((a, s) => a + s.dur, 0));
+  const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+  // ---------- storyboard + track ----------
+  $('scenes').innerHTML = SCENES.map((s, i) => `<li><button type="button" data-i="${i}"><span class="t">${fmt(starts[i])}</span><span class="n">${s.name}</span><span class="d">${s.desc}<br><span style="color:var(--dim)">Caption:</span> ${esc(s.cap)}</span></button></li>`).join('');
+  $('track').innerHTML = SCENES.map((s) => `<div style="flex:${s.dur}"><i></i></div>`).join('');
+  $('scenes').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) play(+b.dataset.i); });
+
+  function paint() {
+    const bars = $('track').children, secs = S.t / 1000;
+    for (let i = 0; i < SCENES.length; i++) {
+      const f = i < S.scene ? 1 : i > S.scene ? 0 : Math.min(1, secs / SCENES[i].dur);
+      bars[i].firstChild.style.width = (f * 100) + '%';
+    }
+    [...$('scenes').children].forEach((li, i) => li.classList.toggle('cur', i === S.scene));
+    $('time').textContent = `${fmt(Math.min(TOTAL, starts[S.scene] + Math.min(secs, SCENES[S.scene].dur)))} / ${fmt(TOTAL)}`;
+    requestAnimationFrame(paint);
+  }
+
+  async function play(from = 0) {
+    const g = ++S.gen; S.paused = false; $('play').textContent = 'Pause';
+    for (let i = from; i < SCENES.length; i++) {
+      S.scene = i; S.t = 0;
+      if (SCENES[i].keep && i > from) { unside(); callout(null); untitle(); } else reset();
+      if (SCENES[i].cap) cap(esc(SCENES[i].cap)).catch(() => {});
+      try { await SCENES[i].run(); await sleep(300); }
+      catch (e) { if (e instanceof Cancel) return; throw e; }
+      if (g !== S.gen) return;
+    }
+    document.documentElement.dataset.done = '1';
+    if (!REC) { await new Promise((r) => setTimeout(r, 2500)); if (g === S.gen) play(0); }
+  }
+
+  $('play').addEventListener('click', () => { S.paused = !S.paused; $('play').textContent = S.paused ? 'Play' : 'Pause'; });
+  $('restart').addEventListener('click', () => play(0));
+  requestAnimationFrame(paint);
+  document.fonts.ready.then(() => play(0));
+})();
+</script>

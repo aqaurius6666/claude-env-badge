@@ -12,6 +12,8 @@ See at a glance which environment a Claude Code Bash command hits. env-badge dra
 
 Prod shows up red and bold. Staging is yellow. Everything else is green.
 
+![env-badge in a Claude Code session: red, yellow and green badges under Bash rows](demo/env-badge-demo.gif)
+
 The badge is only there to catch your eye. It doesn't block commands, change their output, or add anything to Claude's context.
 
 > **Warning: no badge doesn't mean safe.** The command parser is simple. It misses subshells, `bash -c`, heredocs, and commands inside scripts. Don't use the badge, or a missing badge, to decide whether a command is allowed. Use permissions for that.
@@ -209,6 +211,8 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude --plugin-dir . --settings '{"pluginCo
 ```
 
 The script path uses `$PWD` because label scripts aren't guaranteed to run from the repo directory.
+
+The demo GIF comes from [`demo/index.html`](demo/index.html). Edit the scenes there, then run `npm i --no-save playwright gifenc pngjs && node demo/record.mjs` (JetBrains Mono and Instrument Sans must be installed locally).
 
 Commits follow [Conventional Commits](https://www.conventionalcommits.org) (`<type>(<scope>)?!?: <subject>`), checked on every PR. Merging to `main` bumps `plugin.json` and tags `vX.Y.Z` from them: `feat!:`/`BREAKING CHANGE` → major, `feat:` → minor, `fix:`/`perf:`/`refactor:` → patch; `docs`, `test`, `chore`, `ci`, `build`, `style` don't bump.
 
