@@ -210,4 +210,6 @@ CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude --plugin-dir . --settings '{"pluginCo
 
 The script path uses `$PWD` because label scripts aren't guaranteed to run from the repo directory.
 
+Commits follow [Conventional Commits](https://www.conventionalcommits.org) (`<type>(<scope>)?!?: <subject>`), checked on every PR. Merging to `main` bumps `plugin.json` and tags `vX.Y.Z` from them: `feat!:`/`BREAKING CHANGE` → major, `feat:` → minor, `fix:`/`perf:`/`refactor:` → patch; `docs`, `test`, `chore`, `ci`, `build`, `style` don't bump.
+
 Why settings are read by hand: the engine only passes a plugin the keys `plugin.json` declares (`enabled`), so env-badge reads `pluginConfigs` from each settings source itself.
