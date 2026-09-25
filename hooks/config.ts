@@ -1,8 +1,7 @@
 // Flat settings keys -> typed config.
 //
-// Gotcha: pluginConfigs.<plugin>.options only carries strings, numbers, booleans
-// and string lists. One nested object anywhere drops the whole block silently,
-// so every rule/tier field is its own dotted key ("aws.bins", "prod.color").
+// Every rule/tier field is its own dotted key ("aws.bins", "prod.color"): options
+// values stay strings, numbers, booleans and string lists.
 
 export type Rule = {
   id: string
@@ -141,6 +140,24 @@ export function configOf(options: Options): Config {
     defaultTtlMs: num(o.defaultTtlMs) ?? 10_000,
     unknownKeys: Object.keys(o).filter((k) => !known.has(k)),
   }
+}
+
+export const SOURCES = ['user', 'project', 'local', 'flag', 'policy'] as const
+
+// Gotcha: register's `options` only carries keys plugin.json's userConfig declares, so
+// "aws.bins" never arrives there. Read pluginConfigs ourselves, one source at a time in
+// rising precedence, and let each key win from the last source that sets it.
+export function optionsOf(declared: Options, sources: readonly unknown[]): Options {
+  const out: Record<string, unknown> = { ...declared }
+  for (const s of sources) {
+    const configs = (s as { pluginConfigs?: Record<string, { options?: unknown }> } | undefined)?.pluginConfigs ?? {}
+    for (const [key, v] of Object.entries(configs)) {
+      if (key !== 'env-badge' && !key.startsWith('env-badge@')) continue
+      const opts = v?.options
+      if (opts && typeof opts === 'object' && !Array.isArray(opts)) Object.assign(out, opts)
+    }
+  }
+  return out as Options
 }
 
 export function tierOf(tiers: Tier[], text: string, pinned?: string): Tier | undefined {

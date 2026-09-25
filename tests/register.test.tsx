@@ -1,13 +1,18 @@
-// claude plugin test: the mod as the engine loads it. The engine passes only declared userConfig
-// here (no aws.label), so the label-script path is covered by tests/badge.spec.ts and a live run.
+// claude plugin test: the mod as the engine loads it. The engine passes only declared userConfig,
+// so dotted keys reach the mod through $.settings.read, answered here per source.
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 
 const SURFACES = ['terminal', 'desktop', 'vscode', 'mobile'] as const
 
 // the engine's own row, beneath the plugin: nothing answers ui.render in a test otherwise
-function world(on: On, run: (argv: readonly string[]) => { exitCode: number; stdout: string } = () => ({ exitCode: 1, stdout: '' })) {
+function world(
+  on: On,
+  run: (argv: readonly string[]) => { exitCode: number; stdout: string } = () => ({ exitCode: 1, stdout: '' }),
+  settings: Record<string, Record<string, unknown>> = {},
+) {
   mock.env(on, { HOME: '/home/t' })
+  on('settings.read', ($, e) => ({ value: (e.source && settings[e.source]) || {} }))
   on('ui.render', { component: 'ToolUse' }, async ($, e) => {
     const { Text } = await $.ui.resolve(e)
     return <Text>⏺ Bash</Text>
@@ -66,6 +71,18 @@ test('session default resolves after the probe and redraws', async ($, on) => {
   }
   // cached across rows and surfaces: one probe
   expect(seen.filter((s) => s === 'kubectl config current-context')).toHaveLength(1)
+})
+
+test('dotted keys from settings reach the mod, later sources win', async ($, on) => {
+  const opts = (o: object) => ({ pluginConfigs: { 'env-badge': { options: o } } })
+  world(on, undefined, {
+    user: opts({ 'aws.bins': ['aws', 'safe-aws'], 'prod.color': 'magenta' }),
+    local: opts({ 'prod.color': 'blue' }),
+  })
+  const ui = await $.ui.mount({ ...row('safe-aws --profile poc-prod-billing s3 ls'), surface: 'terminal' })
+  const badge = await ui.find({ type: 'Text', text: /aws: poc-prod-billing/ })
+  expect(badge?.props).toMatchObject({ color: 'blue', bold: true })
+  await ui.unmount()
 })
 
 test('unrelated rows and other tools are left alone', async ($, on) => {
