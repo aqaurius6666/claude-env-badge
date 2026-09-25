@@ -1,0 +1,13 @@
+{
+  "name": "env-badge",
+  "owner": {
+    "name": "nguyen.duy.vu"
+  },
+  "plugins": [
+    {
+      "name": "env-badge",
+      "source": "./",
+      "description": "A badge under each Bash tool row naming the environment the command targets (AWS profile, kube context, ...)."
+    }
+  ]
+}
