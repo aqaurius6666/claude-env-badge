@@ -40,7 +40,9 @@ Each row keeps the default it was first drawn with. So after `kubectl config use
 
 Set options in `settings.json` under `pluginConfigs.env-badge.options`.
 
-> **Gotcha: keep every value flat.** Options only accept strings, numbers, booleans and string lists. A single nested object drops the whole block silently. That is why each rule and tier field is its own dotted key, like `"aws.bins"`.
+> **Gotcha: keep every value flat.** Values are strings, numbers, booleans and string lists; a nested object is ignored. That is why each rule and tier field is its own dotted key, like `"aws.bins"`.
+>
+> The engine hands a plugin only the keys `plugin.json` declares (`enabled`), so env-badge reads `pluginConfigs` from every settings source itself (user < project < local < flag < policy, last one wins per key). Edits apply on `/env-badge reload`.
 
 ```json
 {

@@ -3,7 +3,7 @@
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
 import { Resolver } from './badge'
-import { type Config, configOf } from './config'
+import { type Config, configOf, optionsOf, SOURCES } from './config'
 import { mentionsAny } from './env'
 import { expandHome, type Run } from './label'
 
@@ -31,13 +31,36 @@ function json(v: unknown): string {
   return JSON.stringify(v, (_k, x: unknown) => (x instanceof RegExp ? `/${x.source}/${x.flags}` : x))
 }
 
-export const register: Register = (on, options) => {
-  const cfg = configOf(options)
-  // module state lives as long as this load; changing options reloads the module
-  const resolver = new Resolver(cfg)
+type Sources = Partial<Record<(typeof SOURCES)[number], unknown>>
+type Loaded = { cfg: Config; options: PluginOptions; sources: Sources; resolver: Resolver }
 
+async function load($: EngineInterface, declared: PluginOptions): Promise<Loaded> {
+  const sources: Sources = {}
+  for (const source of SOURCES) {
+    try {
+      sources[source] = await $.settings.read({ source })
+    } catch (err) {
+      sources[source] = { error: String(err) }
+    }
+  }
+  const options = optionsOf(declared, SOURCES.map((s) => sources[s]))
+  const cfg = configOf(options)
+  return { cfg, options, sources, resolver: new Resolver(cfg) }
+}
+
+// register has no $, so settings are read on first use; /env-badge reload reads them again.
+// Lives as long as this module load (a reload starts a fresh environment).
+let loaded: Promise<Loaded> | undefined
+
+function current($: EngineInterface, declared: PluginOptions): Promise<Loaded> {
+  loaded ??= load($, declared)
+  return loaded
+}
+
+export const register: Register = (on, declared) => {
   on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
     const drawn = await next(e)
+    const { cfg, resolver } = await current($, declared)
     if (!cfg.enabled || !cfg.tools.includes(e.props.tool)) return drawn
 
     const command = (e.props.input as { command?: unknown } | undefined)?.command
@@ -74,13 +97,15 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'env-badge' }, async ($, e) => {
     const args = e.args.trim()
     const sub = args.split(/\s+/)[0] ?? ''
-    if (sub === 'doctor') return { text: await doctor($, cfg, options, resolver) }
-    if (sub === 'test') return { text: await explain($, resolver, args.slice(sub.length).trim()) }
     if (sub === 'reload') {
-      resolver.clear()
+      loaded = undefined
+      await current($, declared)
       $.ui.invalidate('ui.render')
-      return { text: 'env-badge: caches and pinned rows cleared' }
+      return { text: 'env-badge: settings re-read, caches and pinned rows cleared' }
     }
+    const l = await current($, declared)
+    if (sub === 'doctor') return { text: doctor(l, declared) }
+    if (sub === 'test') return { text: await explain($, l.resolver, args.slice(sub.length).trim()) }
     return { text: sub ? `unknown: ${args}\n${HELP}` : HELP }
   })
 }
@@ -97,7 +122,7 @@ async function explain($: EngineInterface, resolver: Resolver, cmd: string): Pro
     .join('\n')
 }
 
-async function doctor($: EngineInterface, cfg: Config, options: PluginOptions, resolver: Resolver): Promise<string> {
+function doctor({ cfg, options, sources, resolver }: Loaded, declared: PluginOptions): string {
   const lines = [
     `enabled: ${cfg.enabled}   tools: ${cfg.tools.join(', ')}`,
     `format: ${cfg.format}`,
@@ -112,25 +137,22 @@ async function doctor($: EngineInterface, cfg: Config, options: PluginOptions, r
       (t) => `  ${t.id}: match=/${t.match.source}/${t.match.flags} color=${t.color}${t.bold ? ' bold' : ''} prefix=${json(t.prefix)}`,
     ),
     `unknown keys: ${cfg.unknownKeys.length ? cfg.unknownKeys.join(', ') : 'none'}`,
-    `options received: ${json(options)}`,
+    `options from engine (declared userConfig only): ${json(declared)}`,
+    `options merged with settings: ${json(options)}`,
   ]
 
-  // what the settings files hold for us, to spot a block the engine dropped (a nested object drops it whole)
-  for (const source of ['user', 'flag'] as const) {
-    try {
-      const s = (await $.settings.read({ source })) as { pluginConfigs?: Record<string, { options?: unknown }> }
-      for (const [key, v] of Object.entries(s.pluginConfigs ?? {})) {
-        if (key !== 'env-badge' && !key.startsWith('env-badge@')) continue
-        const opts = (v?.options ?? {}) as Record<string, unknown>
-        const nested = Object.keys(opts).filter((k) => {
-          const x = opts[k]
-          return typeof x === 'object' && x !== null && !Array.isArray(x)
-        })
-        lines.push(`settings[${source}].pluginConfigs["${key}"].options: ${json(opts)}`)
-        if (nested.length) lines.push(`  ! nested object value(s) ${nested.join(', ')}: the engine drops the whole block, use dotted keys`)
-      }
-    } catch (err) {
-      lines.push(`settings[${source}]: unreadable (${String(err)})`)
+  for (const source of SOURCES) {
+    const s = sources[source] as { error?: string; pluginConfigs?: Record<string, { options?: unknown }> } | undefined
+    if (s?.error) lines.push(`settings[${source}]: unreadable (${s.error})`)
+    for (const [key, v] of Object.entries(s?.pluginConfigs ?? {})) {
+      if (key !== 'env-badge' && !key.startsWith('env-badge@')) continue
+      const opts = (v?.options ?? {}) as Record<string, unknown>
+      const nested = Object.keys(opts).filter((k) => {
+        const x = opts[k]
+        return typeof x === 'object' && x !== null && !Array.isArray(x)
+      })
+      lines.push(`settings[${source}].pluginConfigs["${key}"].options: ${json(opts)}`)
+      if (nested.length) lines.push(`  ! nested object value(s) ${nested.join(', ')}: ignored, use dotted keys`)
     }
   }
 
