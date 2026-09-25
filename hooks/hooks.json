@@ -1,0 +1,4 @@
+{
+  "description": "Env badge under Bash tool rows, and /env-badge (doctor, test, reload)",
+  "modules": ["./register.tsx"]
+}

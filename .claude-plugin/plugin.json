@@ -1,0 +1,17 @@
+{
+  "name": "env-badge",
+  "version": "0.1.0",
+  "description": "A badge under each Bash tool row naming the environment the command targets (AWS profile, kube context, ...). Rules, tiers, format and label scripts are configured in settings.json pluginConfigs. Display only: never touches tool output or model context.",
+  "author": {
+    "name": "nguyen.duy.vu"
+  },
+  "userConfig": {
+    "enabled": {
+      "type": "boolean",
+      "title": "Env badge",
+      "description": "Draw the env badge under Bash tool rows.",
+      "required": false,
+      "default": true
+    }
+  }
+}
