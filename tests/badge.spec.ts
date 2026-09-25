@@ -138,3 +138,59 @@ describe('Resolver.badges', () => {
     expect(r.defaults.dump()).toEqual([])
   })
 })
+
+describe("Resolver.badges with the owner's real config", () => {
+  const OWNER_OPTIONS = {
+    'aws.bins': ['aws', 'safe-aws'],
+    'k8s.bins': ['kubectl', 'helm', 'k9s', 'safe-kubectl'],
+  }
+
+  test('prod tier and style reached via safe-aws', () => {
+    const r = new Resolver(configOf(OWNER_OPTIONS))
+    const [b] = r.badges('safe-aws --profile poc-prod-billing s3 ls', 'row1', host({}).run, () => {})
+    expect(b).toMatchObject({ text: '⚠ aws: poc-prod-billing', color: 'red', bold: true, dim: false, tier: 'prod' })
+  })
+
+  test('stg tier and style reached via safe-kubectl', () => {
+    const r = new Resolver(configOf(OWNER_OPTIONS))
+    const [b] = r.badges('safe-kubectl --context poc-stg-eks get po', 'row1', host({}).run, () => {})
+    expect(b).toMatchObject({ text: 'k8s: poc-stg-eks', color: 'yellow', bold: false, dim: false, tier: 'stg' })
+  })
+
+  test('other tier and style reached via safe-aws', () => {
+    const r = new Resolver(configOf(OWNER_OPTIONS))
+    const [b] = r.badges('safe-aws --profile sandbox-dev s3 ls', 'row1', host({}).run, () => {})
+    expect(b).toMatchObject({ text: 'aws: sandbox-dev', color: 'green', bold: false, dim: false, tier: 'other' })
+  })
+
+  test('(default) suffix when safe-aws names no profile', async () => {
+    const r = new Resolver(configOf(OWNER_OPTIONS))
+    const h = host({ aws: 'prd-billing' })
+    r.badges('safe-aws s3 ls', 'row1', h.run, () => {})
+    await tick()
+    const [b] = r.badges('safe-aws s3 ls', 'row1', h.run, () => {})
+    expect(b).toMatchObject({ text: '⚠ aws: prd-billing (default)', isDefault: true, tier: 'prod' })
+  })
+
+  test('… placeholder while the default probe is pending has no tier', () => {
+    const r = new Resolver(configOf(OWNER_OPTIONS))
+    const h = host({ k8s: 'prd-eks' })
+    const [b] = r.badges('safe-kubectl get po', 'row1', h.run, () => {})
+    expect(b).toMatchObject({ text: 'k8s: … (default)', dim: true, tier: undefined, color: undefined })
+  })
+
+  test('? when the default probe fails has no tier', async () => {
+    const r = new Resolver(configOf(OWNER_OPTIONS))
+    const h = host({})
+    r.badges('safe-aws s3 ls', 'row1', h.run, () => {})
+    await tick()
+    const [b] = r.badges('safe-aws s3 ls', 'row1', h.run, () => {})
+    expect(b).toMatchObject({ text: 'aws: ? (default)', dim: true, tier: undefined, color: undefined })
+  })
+
+  test('format placeholders resolve for a safe-kubectl badge', () => {
+    const r = new Resolver(configOf({ ...OWNER_OPTIONS, format: '[{tier}] {id}={name} raw={raw}{default}' }))
+    const [b] = r.badges('safe-kubectl --context stg-eks get po', 'row1', host({}).run, () => {})
+    expect(b.text).toBe('[stg] k8s=stg-eks raw=stg-eks')
+  })
+})
