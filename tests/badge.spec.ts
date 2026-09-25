@@ -137,4 +137,20 @@ describe('Resolver.badges', () => {
     expect(r.pinCount()).toBe(0)
     expect(r.defaults.dump()).toEqual([])
   })
+
+  test('other tier: green, no prefix', () => {
+    const r = new Resolver(configOf({}))
+    const [b] = r.badges('aws --profile sandbox-dev s3 ls', 'row1', host({}).run, () => {})
+    expect(b).toMatchObject({ text: 'aws: sandbox-dev', color: 'green', bold: false, dim: false, tier: 'other' })
+  })
+
+  test('extra bin draws the same badge and shares the rule default probe', async () => {
+    const h = host({ aws: 'prd-billing' })
+    const r = new Resolver(configOf({ 'aws.bins': ['aws', 'aws-ro'] }))
+    r.badges('aws-ro s3 ls', 'row1', h.run, () => {})
+    await tick()
+    const [b] = r.badges('aws-ro s3 ls', 'row1', h.run, () => {})
+    expect(b).toMatchObject({ text: '⚠ aws: prd-billing (default)', isDefault: true, tier: 'prod' })
+    expect(h.calls.map((c) => c.argv.join(' '))).toEqual(['printenv AWS_PROFILE'])
+  })
 })
