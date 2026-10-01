@@ -1,6 +1,6 @@
 // Display only: ui.render on ToolUse plus /env-badge. No tool.call, no model context.
 
-import type { EngineInterface, PluginOptions, Register } from 'claude-code'
+import type { EngineInterface, PluginOptions, Register, RenderSurface } from 'claude-code'
 
 import { Resolver } from './badge'
 import { type Config, configOf, optionsOf, SOURCES } from './config'
@@ -52,6 +52,16 @@ async function load($: EngineInterface, declared: PluginOptions): Promise<Loaded
 // Lives as long as this module load (a reload starts a fresh environment).
 let loaded: Promise<Loaded> | undefined
 
+// ToolUse rows seen / badged per surface, for doctor: tells "hook never asked" from "badge not drawn".
+const seen = new Map<RenderSurface, { rows: number; badged: number }>()
+
+function count(surface: RenderSurface, badged: boolean): void {
+  const c = seen.get(surface) ?? { rows: 0, badged: 0 }
+  c.rows++
+  if (badged) c.badged++
+  seen.set(surface, c)
+}
+
 function current($: EngineInterface, declared: PluginOptions): Promise<Loaded> {
   loaded ??= load($, declared)
   return loaded
@@ -65,9 +75,13 @@ export const register: Register = (on, declared) => {
 
     const command = (e.props.input as { command?: unknown } | undefined)?.command
     // cheap gate: most Bash rows never reach the parser
-    if (typeof command !== 'string' || !mentionsAny(command, cfg.rules)) return drawn
+    if (typeof command !== 'string' || !mentionsAny(command, cfg.rules)) {
+      count(e.surface, false)
+      return drawn
+    }
 
     const badges = resolver.badges(command, e.props.tool_use_id, runner($), redraw($))
+    count(e.surface, badges.length > 0)
     if (badges.length === 0) return drawn
 
     const { Box, Text } = await $.ui.resolve(e)
@@ -104,7 +118,7 @@ export const register: Register = (on, declared) => {
       return { text: 'env-badge: settings re-read, caches and pinned rows cleared' }
     }
     const l = await current($, declared)
-    if (sub === 'doctor') return { text: doctor(l, declared) }
+    if (sub === 'doctor') return { text: doctor(l, declared, await $.session.surfaces().catch(() => [])) }
     if (sub === 'test') return { text: await explain($, l.resolver, args.slice(sub.length).trim()) }
     return { text: sub ? `unknown: ${args}\n${HELP}` : HELP }
   })
@@ -122,7 +136,11 @@ async function explain($: EngineInterface, resolver: Resolver, cmd: string): Pro
     .join('\n')
 }
 
-function doctor({ cfg, options, sources, resolver }: Loaded, declared: PluginOptions): string {
+function doctor(
+  { cfg, options, sources, resolver }: Loaded,
+  declared: PluginOptions,
+  surfaces: readonly RenderSurface[],
+): string {
   const lines = [
     `enabled: ${cfg.enabled}   tools: ${cfg.tools.join(', ')}`,
     `format: ${cfg.format}`,
@@ -156,6 +174,9 @@ function doctor({ cfg, options, sources, resolver }: Loaded, declared: PluginOpt
     }
   }
 
+  lines.push(`surfaces attached: ${surfaces.join(', ') || 'none'}`)
+  const rows = [...seen].map(([s, c]) => `${s}=${c.rows} (badged ${c.badged})`)
+  lines.push(`Bash rows seen since load: ${rows.length ? rows.join(', ') : 'none'}`)
   lines.push(`pinned rows: ${resolver.pinCount()}`)
   for (const [name, cache] of [
     ['defaults', resolver.defaults],
