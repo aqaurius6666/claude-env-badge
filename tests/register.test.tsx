@@ -102,3 +102,16 @@ test('/env-badge test explains a command', async ($, on) => {
   const help = await $.command.run(slash(''))
   expect(help.text).toContain('/env-badge doctor')
 })
+
+test('/env-badge doctor counts Bash rows per surface', async ($, on) => {
+  world(on)
+  on('session.surfaces', () => ({ value: ['terminal', 'desktop'] as const }))
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount({ ...row('aws --profile poc-prod-billing s3 ls'), surface })
+    await ui.unmount()
+  }
+  const { text } = await $.command.run(slash('doctor'))
+  expect(text).toContain('surfaces attached: terminal, desktop')
+  expect(text).toMatch(/terminal=\d+ \(badged \d+\)/)
+  expect(text).toMatch(/desktop=\d+ \(badged \d+\)/)
+})

@@ -33,6 +33,18 @@ env-badge uses function hooks, so start Claude Code with them turned on:
 CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 claude
 ```
 
+**Claude Desktop (and other GUI launches):** the app doesn't read your shell's environment, so a variable exported in `~/.zshrc` never reaches it. Set it in the `env` block of `~/.claude/settings.json` instead, then restart the app:
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
+  }
+}
+```
+
+This works for the terminal too.
+
 It works as soon as it's installed: AWS and Kubernetes are covered out of the box.
 
 ## What you get by default
@@ -119,11 +131,13 @@ Full example:
 
 ## Troubleshooting
 
-- **No badge at all.** Check that Claude Code was started with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. Then run `/env-badge test <your command>`. If it says `no rule matches`, the command's first word isn't in any rule's `bins`.
+- **No badge at all.** Check that Claude Code was started with `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`. On Desktop, set it in `~/.claude/settings.json` `env` (see [Install](#install)), since the app ignores your shell profile. Then run `/env-badge test <your command>`. If it says `no rule matches`, the command's first word isn't in any rule's `bins`.
 - **Settings change did nothing.** Run `/env-badge reload`. Then check `/env-badge doctor` for unknown keys, which usually mean a typo, or for a nested object, which gets ignored.
 - **Badge stuck on `?`.** The `default` command failed. Run it yourself in a shell. For AWS, `?` usually means `AWS_PROFILE` isn't set.
 - **Resumed session shows the wrong target on old rows.** Row pins only live in memory, so after a resume old rows show the *current* target.
-- **Desktop, VS Code or mobile shows `?` or raw names.** Those surfaces can't run `default` or `label` scripts. Only the terminal is verified live.
+- **Badge in the terminal but not on Desktop.** Run a matching command (e.g. `kubectl get pods`) on Desktop, then `/env-badge doctor`. If `/env-badge` is unknown, the plugin didn't load there (function hooks off, see above). If `Bash rows seen` has no `desktop=` entry, Desktop never asked the plugin to draw that row. If it shows `desktop=N (badged M)` with M > 0, the badge was handed to Desktop but Desktop didn't draw it.
+- **Desktop shows `?` where the terminal shows a name.** A GUI launch gets a minimal `PATH` and none of your shell's variables, so `kubectl` (e.g. in `/opt/homebrew/bin`) isn't found and `AWS_PROFILE` is unset. Add what's missing to the same `env` block, e.g. `"PATH": "/opt/homebrew/bin:/usr/bin:/bin"` and `"AWS_PROFILE": "sandbox"`, or use absolute paths in `default`/`label`.
+- **VS Code or mobile shows `?` or raw names.** Only the terminal is verified live.
 
 ## Reference
 
