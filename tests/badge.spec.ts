@@ -126,6 +126,23 @@ describe('Resolver.badges', () => {
     expect(r.badges('aws --profile prd-1 s3 ls', 'r', host({}).run, () => {})[0]!.text).toBe('[prod] aws=prd-1 (prd-1)')
   })
 
+  test('forgetDefaults: a fresh default is probed again, pinned rows keep theirs', async () => {
+    let ctx = 'stg-eks'
+    const h = host({})
+    const run: Run = (argv, init) => (argv.join(' ') === 'kubectl config current-context' ? host({ k8s: ctx }).run(argv, init) : h.run(argv, init))
+    const r = new Resolver(configOf({}))
+    r.badges('kubectl get po', 'rowA', run, () => {})
+    await tick()
+    r.badges('kubectl get po', 'rowA', run, () => {}) // pins rowA = stg-eks
+    ctx = 'prd-eks' // `kubectl config use-context prd-eks`, well inside the TTL
+    r.forgetDefaults()
+    expect(r.pinCount()).toBe(1)
+    r.badges('kubectl get po', 'rowB', run, () => {})
+    await tick()
+    expect(r.badges('kubectl get po', 'rowB', run, () => {})[0]!.text).toBe('⚠ k8s: prd-eks (default)')
+    expect(r.badges('kubectl get po', 'rowA', run, () => {})[0]!.text).toBe('k8s: stg-eks (default)')
+  })
+
   test('clear drops caches and pins', async () => {
     const r = new Resolver(configOf({}))
     const h = host({ aws: 'a' })

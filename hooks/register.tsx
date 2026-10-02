@@ -1,4 +1,5 @@
-// Display only: ui.render on ToolUse plus /env-badge. No tool.call, no model context.
+// Display only: ui.render on ToolUse plus /env-badge; tool.call only observes, to drop cached defaults.
+// No model context.
 
 import type { EngineInterface, PluginOptions, Register, RenderSurface } from 'claude-code'
 
@@ -97,6 +98,14 @@ export const register: Register = (on, declared) => {
         </Box>
       </Box>
     )
+  })
+
+  // observe only: never rewrites or denies, the call's result passes through as is
+  on('tool.call', async ($, e, next) => {
+    const ran = await next(e)
+    const { cfg, resolver } = await current($, declared)
+    if (ran.deny === undefined && cfg.tools.includes(e.tool)) resolver.forgetDefaults()
+    return ran
   })
 
   on('session.start', async ($, e, next) => {
