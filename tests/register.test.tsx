@@ -73,6 +73,29 @@ test('session default resolves after the probe and redraws', async ($, on) => {
   expect(seen.filter((s) => s === 'kubectl config current-context')).toHaveLength(1)
 })
 
+test('a finished Bash call drops the cached default', async ($, on) => {
+  let ctx = 'poc-stg-eks'
+  const probes: string[] = []
+  world(on, (argv) => {
+    const is = argv.join(' ') === 'kubectl config current-context'
+    if (is) probes.push(ctx)
+    return { exitCode: is ? 0 : 1, stdout: is ? `${ctx}\n` : '' }
+  })
+  on('tool.call', ($, e) => {
+    if (e.tool === 'Bash' && e.command.includes('use-context')) ctx = 'poc-prod-eks'
+    return { result: { stdout: '', stderr: '', interrupted: false } }
+  })
+  const first = await $.ui.mount({ ...row('kubectl get pods'), surface: 'terminal' })
+  expect((await first.find({ type: 'Text', text: /k8s:/ }))?.text).toBe('k8s: poc-stg-eks (default)')
+  await first.unmount()
+
+  await $.tool.call({ tool: 'Bash', command: 'kubectl config use-context poc-prod-eks' })
+  const second = await $.ui.mount({ ...row('kubectl get pods -A'), surface: 'terminal' })
+  expect((await second.find({ type: 'Text', text: /k8s:/ }))?.text).toBe('⚠ k8s: poc-prod-eks (default)')
+  await second.unmount()
+  expect(probes).toEqual(['poc-stg-eks', 'poc-prod-eks'])
+})
+
 test('dotted keys from settings reach the mod, later sources win', async ($, on) => {
   const opts = (o: object) => ({ pluginConfigs: { 'env-badge': { options: o } } })
   world(on, undefined, {

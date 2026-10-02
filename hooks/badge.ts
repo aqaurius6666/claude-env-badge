@@ -81,6 +81,12 @@ export class Resolver {
     return out
   }
 
+  // A finished command may have switched the default (`kubectl config use-context`, a script):
+  // the next unpinned row probes again. Pinned rows keep what they were drawn with.
+  forgetDefaults(): void {
+    this.defaults.clear()
+  }
+
   clear(): void {
     this.defaults.clear()
     this.labels.clear()

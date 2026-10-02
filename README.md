@@ -65,7 +65,7 @@ It works as soon as it's installed: AWS and Kubernetes are covered out of the bo
 - `…`: still looking up the current target.
 - `?`: the lookup failed. This badge is dim and uncolored on purpose, so an unknown target never looks safe.
 
-Each row keeps the target it was first drawn with. After `kubectl config use-context`, older rows still show the context they actually ran against.
+Each row keeps the target it was first drawn with. After `kubectl config use-context`, older rows still show the context they actually ran against, and the next row probes the new one.
 
 ## Configure
 
@@ -160,7 +160,7 @@ Full example:
 | `format` | `{prefix}{id}: {name}{default}` | Badge text. Placeholders: `{prefix}`, `{id}`, `{name}`, `{raw}`, `{tier}`, `{default}`. |
 | `labelTimeoutMs` | `2000` | Timeout for `default` and `label` scripts. |
 | `labelTtlMs` | `300000` | How long a label result is cached. |
-| `defaultTtlMs` | `10000` | How long a session default is cached. |
+| `defaultTtlMs` | `10000` | How long a session default is cached. Every finished call of a `tools` tool also drops it, so the next row probes again. |
 
 ### Rule options: `<rule>.<field>`
 
