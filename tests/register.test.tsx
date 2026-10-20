@@ -17,7 +17,11 @@ function world(
     const { Text } = await $.ui.resolve(e)
     return <Text>⏺ Bash</Text>
   })
-  on('process.run', ($, e) => ({ value: { ...run(e.argv), stderr: '' } }))
+  on('ui.render', { component: 'ToolGroup' }, async ($, e) => {
+    const { Text } = await $.ui.resolve(e)
+    return <Text>Ran {e.props.calls.length} shell commands</Text>
+  })
+  on('process.run', ($, e) => ({ value: { ...run(e.argv), stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }))
 }
 
 function slash(args: string) {
@@ -137,4 +141,46 @@ test('/env-badge doctor counts Bash rows per surface', async ($, on) => {
   expect(text).toContain('surfaces attached: terminal, desktop')
   expect(text).toMatch(/terminal=\d+ \(badged \d+\)/)
   expect(text).toMatch(/desktop=\d+ \(badged \d+\)/)
+})
+
+function group(commands: string[], isExpanded = false) {
+  return {
+    plugin: 'env-badge',
+    component: 'ToolGroup' as const,
+    props: {
+      calls: commands.map((command, i) => ({
+        tool_use_id: `toolu_g${i}`,
+        tool: 'Bash',
+        input: { command },
+        isRunning: false,
+        isErrored: false,
+        isInterrupted: false,
+      })),
+      isActive: false,
+      isExpanded,
+    },
+  }
+}
+
+test('folded group: badges of its Bash calls under the count line, one per target', async ($, on) => {
+  world(on)
+  for (const surface of SURFACES) {
+    const ui = await $.ui.mount({
+      ...group(['aws --profile poc-prod-billing s3 ls', 'kubectl get pods --context dev-eu', 'ls', 'aws --profile poc-prod-billing s3 ls']),
+      surface,
+    })
+    const prod = await ui.findAll({ type: 'Text', text: /aws: poc-prod-billing/ })
+    expect(prod).toHaveLength(1)
+    expect(prod[0]?.props).toMatchObject({ color: 'red', bold: true })
+    const dev = await ui.find({ type: 'Text', text: /k8s: dev-eu/ })
+    expect(dev?.props).toMatchObject({ color: 'green' })
+    await ui.unmount()
+  }
+})
+
+test('expanded group: no badges at group level (each ToolUse row draws its own)', async ($, on) => {
+  world(on)
+  const ui = await $.ui.mount({ ...group(['aws --profile poc-prod-billing s3 ls'], true), surface: 'terminal' })
+  expect(await ui.find({ type: 'Text', text: /aws:/ })).toBeUndefined()
+  await ui.unmount()
 })

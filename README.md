@@ -12,6 +12,8 @@ See at a glance which environment a Claude Code Bash command hits. env-badge dra
 
 Prod shows up red and bold. Staging is yellow. Everything else is green.
 
+When Claude Code folds several calls into one line (`Ran 3 shell commands`), the badges of the Bash calls inside go under that line, one per target.
+
 ![env-badge in a Claude Code session: red, yellow and green badges under Bash rows](demo/env-badge-demo.gif)
 
 The badge is only there to catch your eye. It doesn't block commands, change their output, or add anything to Claude's context.
