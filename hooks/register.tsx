@@ -1,9 +1,9 @@
-// Display only: ui.render on ToolUse plus /env-badge; tool.call only observes, to drop cached defaults.
+// Display only: ui.render on ToolUse and ToolGroup plus /env-badge; tool.call only observes, to drop cached defaults.
 // No model context.
 
 import type { EngineInterface, PluginOptions, Register, RenderSurface } from 'claude-code'
 
-import { Resolver } from './badge'
+import { type Badge, Resolver } from './badge'
 import { type Config, configOf, optionsOf, SOURCES } from './config'
 import { mentionsAny } from './env'
 import { expandHome, type Run } from './label'
@@ -83,6 +83,52 @@ export const register: Register = (on, declared) => {
 
     const badges = resolver.badges(command, e.props.tool_use_id, runner($), redraw($))
     count(e.surface, badges.length > 0)
+    if (badges.length === 0) return drawn
+
+    const { Box, Text } = await $.ui.resolve(e)
+    return (
+      <Box flexDirection="column">
+        {drawn}
+        <Box marginLeft={2} gap={2}>
+          {badges.map((b) => (
+            <Text key={b.key} color={b.color} bold={b.bold} dimColor={b.dim}>
+              {b.text}
+            </Text>
+          ))}
+        </Box>
+      </Box>
+    )
+  })
+
+  // Newer UIs fold a run of calls into one count line (`ran 3 shell commands`): no ToolUse row
+  // is drawn, so the badges of the folded Bash calls go under that line instead.
+  // Expanded groups draw each call as a ToolUse row, which the hook above badges.
+  on('ui.render', { component: 'ToolGroup' }, async ($, e, next) => {
+    const drawn = await next(e)
+    if (e.props.isExpanded) return drawn
+    const { cfg, resolver } = await current($, declared)
+    if (!cfg.enabled) return drawn
+
+    const badges: Badge[] = []
+    const keys = new Set<string>()
+    for (const [i, call] of e.props.calls.entries()) {
+      if (!cfg.tools.includes(call.tool)) continue
+      const command = (call.input as { command?: unknown } | undefined)?.command
+      if (typeof command !== 'string' || !mentionsAny(command, cfg.rules)) {
+        count(e.surface, false)
+        continue
+      }
+      // same row id as the call's own ToolUse row, so unfolding keeps the pinned default
+      const rowId = call.tool_use_id ?? `group:${i}:${command}`
+      const found = resolver.badges(command, rowId, runner($), redraw($))
+      count(e.surface, found.length > 0)
+      for (const b of found) {
+        // one badge per target across the group
+        if (keys.has(b.text)) continue
+        keys.add(b.text)
+        badges.push(b)
+      }
+    }
     if (badges.length === 0) return drawn
 
     const { Box, Text } = await $.ui.resolve(e)
